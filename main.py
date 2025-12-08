@@ -51,6 +51,8 @@ def print_url_tree(current_node=url_tree, node_number="1", level=1, include_para
     if(include_params):
         print_params(current_node, identation=identation)
 
+    print()
+
     if("childs" in current_node):
         for child_node, index in zip(current_node["childs"], range(0, len(current_node["childs"]))):
             print_url_tree(child_node, f"{node_number}.{index+1}", level+1, include_params=include_params)
