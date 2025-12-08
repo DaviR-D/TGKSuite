@@ -1,11 +1,12 @@
 import argparse
+import json
 import fuzzer
 import crawler
 
 url_tree = dict()
 
 def main():
-    methods = [print, fuzzing, crawling, print_url_tree, print_params, print_urls_params]
+    methods = [print, fuzzing, craw_one, print_url_tree, print_params, print_urls_params, crawl_all, save_url_tree]
 
     option = 99
     parser = argparse.ArgumentParser(description="ShingekiSuite")
@@ -29,6 +30,8 @@ def print_menu():
     print("3) Show available URLs")
     print("4) Print params")
     print("5) Print URLs and params")
+    print("6) Crawl all URLs")
+    print("7) Save URL tree")
     print("0) Exit")
 
 def fuzzing():
@@ -36,16 +39,18 @@ def fuzzing():
     wordlist_path = input("Wordlist: ")
     fuzzer.fuzz(target_url["url"], wordlist_path)
 
-def crawling():
+def craw_one():
     target_url = search_tree(input("Target URL: "), url_tree)
     target_url["childs"] = crawler.crawl(target_url["url"])
 
-def print_url_tree(current_node=url_tree, node_number="1", level=1, include_params=False):
-    identation = ""
+def crawl_all(node=url_tree):
+    if("childs" in node):
+        for child_node in node["childs"]:
+            crawl_all(child_node)
+    else:
+        node["childs"] = crawler.crawl(node["url"])
 
-    for l in range(0, level):
-        identation += "  "
-
+def print_url_tree(current_node=url_tree, node_number="1", identation = "", include_params=False):
     print(f"{identation}{node_number}. {current_node["url"]}")
 
     if(include_params):
@@ -55,7 +60,7 @@ def print_url_tree(current_node=url_tree, node_number="1", level=1, include_para
 
     if("childs" in current_node):
         for child_node, index in zip(current_node["childs"], range(0, len(current_node["childs"]))):
-            print_url_tree(child_node, f"{node_number}.{index+1}", level+1, include_params=include_params)
+            print_url_tree(child_node, f"{node_number}.{index+1}", f"{identation}  ", include_params=include_params)
 
 def print_params(target_url=False, identation=""):
     if(not target_url):
@@ -80,6 +85,12 @@ def search_tree(number, node):
         next_node = node["childs"][next_index]
 
         return search_tree(".".join(index_array), next_node)
+    
+def save_url_tree():
+    with open("output/url_tree.json", "w+", encoding="utf-8") as output:
+        json.dump(url_tree, output, ensure_ascii=False, indent=2)
+
+    print("Written in output/url_tree.json")
         
 
 if __name__ == "__main__":
