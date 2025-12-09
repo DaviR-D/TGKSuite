@@ -11,8 +11,11 @@ def main():
     option = 99
     parser = argparse.ArgumentParser(description="ShingekiSuite")
     parser.add_argument("-u", "--url", help="Target URL")
+    parser.add_argument("-if", "--import-file", help="Import previous session")
     args = parser.parse_args()
     url_tree["url"] = args.url
+    if(args.import_file):
+        import_url_tree(args.import_file)
 
     while option != "0":
         print_menu()
@@ -93,8 +96,11 @@ def save_url_tree():
 
     print("Written in output/url_tree.json")
 
-def import_url_tree():
-    with open(input("File to import: "), "r", encoding="utf-8") as file:
+def import_url_tree(import_file=None):
+    if(not import_file):
+        import_file = input("File to import: ")
+        
+    with open(import_file, "r", encoding="utf-8") as file:
         data = json.load(file)
     url_tree.clear()
     url_tree.update(data)
