@@ -6,7 +6,9 @@ def loadWordlist(file_path):
         return wordlist.read().split('\n')
 
 def fuzz(target, wordlist_path, cookies, delay_time=0):
-    with open("output/fuzz.txt", 'w+', encoding='utf-8') as output:
+    output_file_name = '-'.join(target.split('/'))
+
+    with open(f"output/{output_file_name}.txt", 'w+', encoding='utf-8') as output:
         wordlist = loadWordlist(wordlist_path)
         for payload in wordlist:
             response = exception_safe_request(target, payload, cookies)
