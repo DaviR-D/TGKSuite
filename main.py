@@ -7,10 +7,7 @@ url_tree = dict()
 fuzzing_wordlist = ""
 cookies = dict()
 
-def main():
-    methods = [print, fuzzing, craw_one, print_url_tree, print_params, print_urls_params, crawl_all, save_url_tree, import_url_tree]
-
-    option = 99
+def add_args():
     parser = argparse.ArgumentParser(description="ShingekiSuite")
     parser.add_argument("-u", "--url", help="Target URL")
     parser.add_argument("-is", "--import-session", help="Import previous session")
@@ -18,17 +15,32 @@ def main():
     parser.add_argument("-c", "--cookie", help="Cookie (key=value)", action="append")
     args = parser.parse_args()
 
+    return args
+
+def load_args():
+    global fuzzing_wordlist
+    global url_tree
+
+    args = add_args()
+
     for cookie in args.cookie or []:
         key, value = cookie.split('=', 1)
         cookies[key] = value
 
-
     url_tree["url"] = args.url
-    global fuzzing_wordlist
+
     fuzzing_wordlist = args.fuzzer_wordlist
 
     if(args.import_session):
         import_url_tree(args.import_session)
+
+
+def main():
+    methods = [print, fuzzing, craw_one, print_url_tree, print_params, print_urls_params, crawl_all, save_url_tree, import_url_tree]
+
+    load_args()
+
+    option = 99
 
     while option != "0":
         print_menu()
