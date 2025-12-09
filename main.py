@@ -5,6 +5,7 @@ import crawler
 
 url_tree = dict()
 fuzzing_wordlist = ""
+cookies = dict()
 
 def main():
     methods = [print, fuzzing, craw_one, print_url_tree, print_params, print_urls_params, crawl_all, save_url_tree, import_url_tree]
@@ -14,7 +15,13 @@ def main():
     parser.add_argument("-u", "--url", help="Target URL")
     parser.add_argument("-is", "--import-session", help="Import previous session")
     parser.add_argument("-fw", "--fuzzer-wordlist", help="Set fixed fuzzing wordlist")
+    parser.add_argument("-c", "--cookie", help="Cookie (key=value)", action="append")
     args = parser.parse_args()
+
+    for cookie in args.cookie or []:
+        key, value = cookie.split('=', 1)
+        cookies[key] = value
+
 
     url_tree["url"] = args.url
     global fuzzing_wordlist
@@ -45,25 +52,30 @@ def print_menu():
     print("0) Exit")
 
 def fuzzing():
+    global fuzzing_wordlist
+    global cookies
+    
     target_url = search_tree(input("Target URL: "), url_tree)
 
-    global fuzzing_wordlist
-
-    if(len(fuzzing_wordlist) == 0):
+    if(not fuzzing_wordlist or len(fuzzing_wordlist) == 0):
         fuzzing_wordlist = input("Wordlist: ")
         
-    fuzzer.fuzz(target_url["url"], fuzzing_wordlist)
+    fuzzer.fuzz(target_url["url"], fuzzing_wordlist, cookies)
 
 def craw_one():
+    global cookies
+
     target_url = search_tree(input("Target URL: "), url_tree)
-    target_url["childs"] = crawler.crawl(target_url["url"])
+    target_url["childs"] = crawler.crawl(target_url["url"], cookies)
 
 def crawl_all(node=url_tree):
+    global cookies
+
     if("childs" in node):
         for child_node in node["childs"]:
             crawl_all(child_node)
     else:
-        node["childs"] = crawler.crawl(node["url"])
+        node["childs"] = crawler.crawl(node["url"], cookies)
 
 def print_url_tree(current_node=url_tree, node_number="1", identation = "", include_params=False):
     print(f"{identation}{node_number}. {current_node["url"]}")

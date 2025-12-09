@@ -1,7 +1,7 @@
 import requests
 import re
 
-def crawl(url):
+def crawl(url, cookies):
     child_urls = list()
     print()
     print("---------------------Root URL:---------------------")
@@ -9,7 +9,7 @@ def crawl(url):
     print("---------------------------------------------------")
     print()
 
-    response = requests.get(url)
+    response = requests.get(url, cookies=cookies)
 
     hrefs = re.findall(r'href="(.*?)"', response.text)
 
