@@ -6,7 +6,7 @@ import crawler
 url_tree = dict()
 
 def main():
-    methods = [print, fuzzing, craw_one, print_url_tree, print_params, print_urls_params, crawl_all, save_url_tree]
+    methods = [print, fuzzing, craw_one, print_url_tree, print_params, print_urls_params, crawl_all, save_url_tree, import_url_tree]
 
     option = 99
     parser = argparse.ArgumentParser(description="ShingekiSuite")
@@ -31,7 +31,8 @@ def print_menu():
     print("4) Print params")
     print("5) Print URLs and params")
     print("6) Crawl all URLs")
-    print("7) Save URL tree")
+    print("7) Export URL tree")
+    print("8) Import URL tree")
     print("0) Exit")
 
 def fuzzing():
@@ -91,7 +92,12 @@ def save_url_tree():
         json.dump(url_tree, output, ensure_ascii=False, indent=2)
 
     print("Written in output/url_tree.json")
-        
 
+def import_url_tree():
+    with open(input("File to import: "), "r", encoding="utf-8") as file:
+        data = json.load(file)
+    url_tree.clear()
+    url_tree.update(data)
+        
 if __name__ == "__main__":
     main()
