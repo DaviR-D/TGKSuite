@@ -7,8 +7,9 @@ def print_menu():
     print("4) Print params")
     print("5) Print URLs and params")
     print("6) Crawl all URLs")
-    print("7) Export URL tree")
-    print("8) Import URL tree")
+    print("7) Save scripts")
+    print("8) Export URL tree")
+    print("9) Import URL tree")
     print("0) Exit")
     print()
 

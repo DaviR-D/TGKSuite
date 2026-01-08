@@ -3,6 +3,7 @@ from visual import *
 from crawler import *
 from fuzzer import *
 from url_tree_handler import *
+from get_scripts import filter_scripts
 import argparse
 
 
@@ -58,8 +59,9 @@ def handle_option(option):
     4: lambda: print_params(find_node_by_number(input("Target URL: "), url_tree)),
     5: lambda: print_url_tree(current_node=url_tree, include_params=True),
     6: lambda: crawl_all(node=url_tree, cookies=cookies, url_tree=url_tree, domain=domain),
-    7: lambda: export_session(url_tree=url_tree),
-    8: lambda: import_session(url_tree),
+    7: lambda: filter_scripts(node=url_tree),
+    8: lambda: export_session(url_tree=url_tree),
+    9: lambda: import_session(url_tree),
 }
     
     handle[int(option)]()

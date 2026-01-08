@@ -5,11 +5,9 @@ from url_tree_handler import find_node_by_url
 
 def crawl(url, cookies, url_tree, domain=""):
     child_urls = list()
-    print()
-    print("---------------------Root URL:---------------------")
+    print("\n---------------------Root URL:---------------------")
     print(url)
-    print("---------------------------------------------------")
-    print()
+    print("---------------------------------------------------\n")
 
     try:
         response = requests.get(url, cookies=cookies, timeout=10)
