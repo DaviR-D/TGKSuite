@@ -12,10 +12,10 @@ def crawl(url, cookies, domain=""):
 
     response = requests.get(url, cookies=cookies)
 
-    hrefs = re.findall(r'href="(.*?)"', response.text)
+    links = re.findall(r'(?:href|src)="(.*?)"', response.text)
 
-    for ref in hrefs:
-        split_url = ref.split("?")
+    for link in links:
+        split_url = link.split("?")
         child_url = split_url[0]
         if("http" not in child_url):
             child_url = url + '/' + child_url
