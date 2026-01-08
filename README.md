@@ -1,6 +1,6 @@
-# **ShingekiSuite**
+# **TeigekiSuite**
 
-ShingekiSuite is a lightweight, modular web-security toolkit focused on crawling, fuzzing, and session-based exploration of web applications. It provides an interactive workflow for mapping URL structures, identifying potential attack surfaces, and performing fuzzing tests using custom wordlists.
+TeigekiSuite is a lightweight, modular web-security toolkit focused on crawling, fuzzing, and session-based exploration of web applications. It provides an interactive workflow for mapping URL structures, identifying potential attack surfaces, and performing fuzzing tests using custom wordlists.
 
 ---
 
