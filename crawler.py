@@ -10,7 +10,7 @@ def crawl(url, cookies, url_tree, domains=[]):
     print("---------------------------------------------------\n")
 
     try:
-        response = requests.get(url, cookies=cookies, timeout=10)
+        response = requests.get(url, cookies=cookies)
     except requests.exceptions.TooManyRedirects:
         print(f"URL {url} got into redirect loop, continuing to the next...")
         return child_urls
