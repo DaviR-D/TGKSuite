@@ -22,3 +22,13 @@ def find_node_by_url(url, node):
                 return result
         
     return None
+def index_nodes_by_url(node, index=None):
+    if index is None:
+        index = dict()
+
+    index[node['url']] = node
+
+    for child_node in node.get("childs", []):
+        index_nodes_by_url(node=child_node, index=index)
+
+    return index

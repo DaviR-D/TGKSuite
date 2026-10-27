@@ -1,12 +1,32 @@
 from urllib.parse import urlparse, urljoin
 import requests
-import re
-from url_tree_handler import find_node_by_url
+from url_tree_handler import index_nodes_by_url
 from http_client import check_domain, safe_get, OutOfScopeError
+from extractor import extract_links
 from utils import sanitize
 
+# Fetching these can't reveal new links, so they stay in the tree without being requested
+STATIC_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".webp", ".svg", ".woff", ".woff2", ".ttf", ".otf", ".eot",
+                     ".mp3", ".mp4", ".webm", ".avi", ".mov", ".pdf", ".zip", ".gz", ".tar", ".rar", ".7z", ".exe", ".dmg", ".iso")
+
+def normalize_link(link, base_url):
+    try:
+        parsed = urlparse(urljoin(base_url, link))
+    except ValueError:
+        return None, []
+
+    if parsed.scheme not in ("http", "https"):
+        return None, []
+
+    child_url = parsed._replace(query="", fragment="").geturl().rstrip("/")
+    query_params = [param for param in parsed.query.split("&") if param]
+
+    return child_url, query_params
+
+def merge_params(node, params):
+    node['params'] = list(set(node['params']) | set(params))
+
 def crawl(url, cookies, url_tree, domains=[], headers=None):
-    child_urls = list()
     print("\n---------------------Root URL:---------------------")
     print(sanitize(text=url))
     print("---------------------------------------------------\n")
@@ -15,59 +35,55 @@ def crawl(url, cookies, url_tree, domains=[], headers=None):
         response = safe_get(url=url, domains=domains, cookies=cookies, headers=headers)
     except OutOfScopeError as error:
         print(f"{error}, continuing to the next...")
-        return child_urls
+        return None
     except requests.exceptions.RequestException as error:
         print(f"Request to {sanitize(text=url)} failed ({type(error).__name__}), continuing to the next...")
-        return child_urls
+        return None
 
+    base_url, links = extract_links(text=response.text, content_type=response.headers.get("Content-Type", ""))
 
-    page_links = re.findall(r'(?:href|src)="(.*?)"', response.text)
+    # Relative links resolve against <base href> or the final URL after redirects
+    base_url = urljoin(response.url, base_url) if base_url else response.url
 
-    page_links = list(set(page_links))
+    known_nodes = index_nodes_by_url(node=url_tree)
+    child_nodes = dict()
 
-    for link in page_links:
-        split_url = link.strip().split("?", 1)
+    for link in links:
+        # An empty link (e.g. a form without action) points to the page itself, not to <base href>
+        link_base_url = base_url if link["url"] else response.url
+        child_url, query_params = normalize_link(link=link["url"], base_url=link_base_url)
 
-        child_url = split_url[0]
-
-        child_url = child_url.rstrip("/")
-
-        query_params = split_url[1].split("&") if len(split_url) > 1 else []
-
-        try:
-            parsed = urlparse(child_url)
-
-            if parsed.scheme not in ("http", "https", ""):
-                continue
-
-            # Relative links resolve against the final URL after redirects
-            if not parsed.scheme:
-                child_url = urljoin(response.url, child_url)
-        except ValueError:
+        if child_url is None or not check_domain(url=child_url, domains=domains):
             continue
 
+        query_params.extend(link["params"])
 
-        if not check_valid_url(new_url=child_url,
-                               new_nodes=child_urls,
-                               domains=domains,
-                               url_tree=url_tree,
-                               query_params=query_params
-                            ):
+        existing_node = child_nodes.get(child_url) or known_nodes.get(child_url)
+
+        if existing_node is not None:
+            merge_params(node=existing_node, params=query_params)
             continue
 
-        print(f"\nURL found: {sanitize(text=child_url)}")
+        child_nodes[child_url] = {"url": child_url, "params": list(set(query_params))}
 
-        if(len(query_params) > 1):
-            print(f"Params: {sanitize(text=query_params)}")
+    for child_node in child_nodes.values():
+        print(f"\nURL found: {sanitize(text=child_node['url'])}")
 
+        if(child_node['params']):
+            print(f"Params: {sanitize(text=child_node['params'])}")
 
-        child_urls.append({"url":child_url, "params":query_params})
-
-
-    return child_urls
+    return list(child_nodes.values())
 
 def crawl_one(node, cookies, url_tree, domains=[], headers=None):
-    node["childs"] = crawl(url=node["url"], cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
+    if urlparse(node["url"]).path.lower().endswith(STATIC_EXTENSIONS):
+        node.setdefault("childs", [])
+        return
+
+    child_nodes = crawl(url=node["url"], cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
+
+    # Failed requests leave the node uncrawled so the next pass retries it
+    if child_nodes is not None:
+        node.setdefault("childs", []).extend(child_nodes)
 
 def crawl_all(node, cookies, url_tree, domains=[], visited=None, headers=None):
 
@@ -76,33 +92,15 @@ def crawl_all(node, cookies, url_tree, domains=[], visited=None, headers=None):
 
     if(node['url'] in visited):
         return
-    
-    visited.add(node['url'].rstrip("/"))
 
-    if("childs" in node and len(node['childs']) > 0):
-        for child_node in node["childs"]:
+    visited.add(node['url'])
+
+    # Nodes with a "childs" key were already crawled, only their children are visited
+    if("childs" in node):
+        for child_node in list(node["childs"]):
             crawl_all(node=child_node, cookies=cookies, url_tree=url_tree, domains=domains, visited=visited, headers=headers)
     else:
         crawl_one(node=node, cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
-
-def check_valid_url(new_url, new_nodes, domains, url_tree, query_params):
-    if not (check_domain(url=new_url, domains=domains)):
-        return False
-
-    for node in new_nodes:
-        if(node['url'] == new_url):
-            node['params'].extend(query_params)
-            node['params'] = list(set(node['params']))
-            return False
-
-    existing_node = find_node_by_url(url=new_url, node=url_tree)
-
-    if(existing_node is not None):
-        existing_node['params'].extend(query_params)
-        existing_node['params'] = list(set(existing_node['params']))
-        return False
-        
-    return True
 
 def deep_crawl(depth, cookies, url_tree, domains=[], headers=None):
     for i in range(0, depth):
