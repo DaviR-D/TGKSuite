@@ -13,16 +13,46 @@ from visual import print_menu, print_url_tree, print_params
 
 DEFAULT_CRAWL_DEPTH = 3
 
+DESCRIPTION = """TeigekiSuite - web recon toolkit: crawling, script collection and fuzzing.
+
+Without -a, an interactive menu opens to crawl, fuzz and inspect the URL tree.
+Requests only go over https to the target domain, its subdomains and -d domains;
+redirects leaving that scope are blocked, so cookies and headers never leak."""
+
+EXAMPLES = [
+    ("-t example.com", "open the interactive menu"),
+    ("-t example.com -a", f"crawl {DEFAULT_CRAWL_DEPTH} levels, save scripts, export session"),
+    ("-t example.com -a -cd 5", "automatic recon 5 levels deep"),
+    ("-t example.com -d api.example.net", "also allow requests to api.example.net"),
+    ("-t example.com -c session=abc -H \"Authorization: Bearer xyz\"", "authenticated crawling"),
+    (f"-is {OUTPUT_DIR}/url_tree.json", "resume a previous session"),
+]
+
+def build_epilog():
+    examples = "\n\n".join(f"  # {explanation}\n  %(prog)s {command}" for command, explanation in EXAMPLES)
+
+    return f"examples:\n{examples}\n\noutput files (scripts, fuzzing results, session) are saved in {OUTPUT_DIR}/"
+
 def build_parser():
-    parser = argparse.ArgumentParser(description="TeigekiSuite")
-    parser.add_argument("-t", "--target", help="Target domain, e.g. example.com (crawled over https and used as the default scope)", metavar="domain")
-    parser.add_argument("-is", "--import-session", help="Import previous session", metavar="session")
-    parser.add_argument("-fw", "--fuzzer-wordlist", help="Set fixed fuzzing wordlist", metavar="wordlist")
-    parser.add_argument("-d", "--domain", help="Additional in-scope domain (multiple uses supported)", action="append", metavar="domain")
-    parser.add_argument("-c", "--cookie", help="Cookie (key=value, multiple uses supported)", action="append", metavar="cookie")
-    parser.add_argument("-H", "--header", help="Custom HTTP header (\"Name: Value\", multiple uses supported)", action="append", metavar="header")
-    parser.add_argument("-a", "--auto-recon", help="Perform default automatic recon", action="store_true")
-    parser.add_argument("-cd", "--crawl-depth", help=f"Crawling depth used by the automatic recon (default: {DEFAULT_CRAWL_DEPTH})", type=int, default=DEFAULT_CRAWL_DEPTH, metavar="depth")
+    parser = argparse.ArgumentParser(description=DESCRIPTION, epilog=build_epilog(), formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    target = parser.add_argument_group("target (one is required)")
+    target.add_argument("-t", "--target", metavar="DOMAIN", help="target domain, optionally with port (e.g. example.com, example.com:8443); crawled over https")
+    target.add_argument("-is", "--import-session", metavar="FILE", help="resume from a session file exported earlier (takes precedence over -t)")
+
+    scope = parser.add_argument_group("scope")
+    scope.add_argument("-d", "--domain", metavar="DOMAIN", action="append", help="extra in-scope domain, subdomains included (repeatable)")
+
+    authentication = parser.add_argument_group("authentication")
+    authentication.add_argument("-c", "--cookie", metavar="KEY=VALUE", action="append", help="cookie sent with every request (repeatable)")
+    authentication.add_argument("-H", "--header", metavar="\"NAME: VALUE\"", action="append", help="header sent with every request (repeatable)")
+
+    recon = parser.add_argument_group("automatic recon")
+    recon.add_argument("-a", "--auto-recon", action="store_true", help="crawl, save the javascript files found and export the session, without the menu")
+    recon.add_argument("-cd", "--crawl-depth", metavar="N", type=int, default=DEFAULT_CRAWL_DEPTH, help=f"how many levels -a crawls (default: {DEFAULT_CRAWL_DEPTH})")
+
+    fuzzing = parser.add_argument_group("fuzzing")
+    fuzzing.add_argument("-fw", "--fuzzer-wordlist", metavar="FILE", help="wordlist used by the menu's fuzz option (asked for when omitted)")
 
     return parser
 
@@ -62,7 +92,7 @@ def load_url_tree(args):
     if args.target:
         return new_node(url=f"https://{parse_domain(domain=args.target, allow_port=True)}")
 
-    raise ValueError("a target is required: use -t <domain> or -is <session>")
+    raise ValueError("a target is required: use -t DOMAIN or -is FILE")
 
 def build_scan(args):
     url_tree = load_url_tree(args=args)
