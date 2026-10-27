@@ -2,17 +2,22 @@ from urllib.parse import urlparse, urljoin
 import requests
 import re
 from url_tree_handler import find_node_by_url
+from http_client import check_domain, safe_get, OutOfScopeError
+from utils import sanitize
 
 def crawl(url, cookies, url_tree, domains=[], headers=None):
     child_urls = list()
     print("\n---------------------Root URL:---------------------")
-    print(url)
+    print(sanitize(text=url))
     print("---------------------------------------------------\n")
 
     try:
-        response = requests.get(url, cookies=cookies, headers=headers)
-    except requests.exceptions.TooManyRedirects:
-        print(f"URL {url} got into redirect loop, continuing to the next...")
+        response = safe_get(url=url, domains=domains, cookies=cookies, headers=headers)
+    except OutOfScopeError as error:
+        print(f"{error}, continuing to the next...")
+        return child_urls
+    except requests.exceptions.RequestException as error:
+        print(f"Request to {sanitize(text=url)} failed ({type(error).__name__}), continuing to the next...")
         return child_urls
 
 
@@ -21,7 +26,7 @@ def crawl(url, cookies, url_tree, domains=[], headers=None):
     page_links = list(set(page_links))
 
     for link in page_links:
-        split_url = link.split("?", 1)
+        split_url = link.strip().split("?", 1)
 
         child_url = split_url[0]
 
@@ -29,13 +34,17 @@ def crawl(url, cookies, url_tree, domains=[], headers=None):
 
         query_params = split_url[1].split("&") if len(split_url) > 1 else []
 
-        parsed = urlparse(child_url)
-    
-        if parsed.scheme not in ("http", "https", ""):
-            continue 
+        try:
+            parsed = urlparse(child_url)
 
-        if not parsed.scheme:
-            child_url = urljoin(url, child_url)
+            if parsed.scheme not in ("http", "https", ""):
+                continue
+
+            # Relative links resolve against the final URL after redirects
+            if not parsed.scheme:
+                child_url = urljoin(response.url, child_url)
+        except ValueError:
+            continue
 
 
         if not check_valid_url(new_url=child_url,
@@ -46,10 +55,10 @@ def crawl(url, cookies, url_tree, domains=[], headers=None):
                             ):
             continue
 
-        print(f"\nURL found: {child_url}")
+        print(f"\nURL found: {sanitize(text=child_url)}")
 
         if(len(query_params) > 1):
-            print(f"Params: {query_params}")
+            print(f"Params: {sanitize(text=query_params)}")
 
 
         child_urls.append({"url":child_url, "params":query_params})
@@ -75,18 +84,6 @@ def crawl_all(node, cookies, url_tree, domains=[], visited=None, headers=None):
             crawl_all(node=child_node, cookies=cookies, url_tree=url_tree, domains=domains, visited=visited, headers=headers)
     else:
         crawl_one(node=node, cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
-
-def check_domain(url, domains):
-    if not domains:
-        return True
-
-    new_url_domain = urlparse(url).hostname
-
-    for domain in domains:
-        if(new_url_domain == domain or new_url_domain.endswith(f'.{domain}')):
-            return True
-        
-    return False
 
 def check_valid_url(new_url, new_nodes, domains, url_tree, query_params):
     if not (check_domain(url=new_url, domains=domains)):

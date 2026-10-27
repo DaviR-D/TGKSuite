@@ -10,7 +10,8 @@ TeigekiSuite is a lightweight, modular web-security toolkit focused on crawling,
 
 * Recursively parses web pages and extracts links.
 * Builds a structured URL tree representing application navigation.
-* Supports optional cookies for authenticated crawling.
+* Supports optional cookies and custom headers for authenticated crawling.
+* Stays inside the target scope: the `-u` domain (and its subdomains) plus any `-d` domains. Redirects to other hosts are blocked, so credentials are never sent out of scope.
 
 ### 🧪 Fuzzer
 
@@ -35,7 +36,7 @@ TeigekiSuite is a lightweight, modular web-security toolkit focused on crawling,
 ### Start crawling
 
 ```bash
-python3 main.py -u https://target.com
+python3 main.py -u target.com
 ```
 
 ### Load a previous session
@@ -47,19 +48,25 @@ python3 main.py -is session.json
 ### Use cookies
 
 ```bash
-python3 main.py -c "SESSIONID=12345; token=abcd"
+python3 main.py -u target.com -c "SESSIONID=12345"
+```
+
+### Add extra in-scope domains
+
+```bash
+python3 main.py -u target.com -d api.othertarget.com
 ```
 
 ### Use custom headers
 
 ```bash
-python3 main.py -u https://target.com -H "Authorization: Bearer abc123" -H "X-Api-Key: xyz"
+python3 main.py -u target.com -H "Authorization: Bearer abc123" -H "X-Api-Key: xyz"
 ```
 
 ### Run fuzzing
 
 ```bash
-python3 main.py -u https://target.com -fw wordlists/common.txt
+python3 main.py -u target.com -fw wordlists/common.txt
 ```
 
 ## **How It Works**

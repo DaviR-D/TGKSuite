@@ -1,3 +1,5 @@
+from utils import sanitize
+
 def print_menu():
 
     print()
@@ -15,7 +17,7 @@ def print_menu():
     print()
 
 def print_url_tree(current_node, node_number="1", identation = "", include_params=False):
-    print(f"{identation}{node_number}. {current_node["url"]}")
+    print(f"{identation}{node_number}. {sanitize(text=current_node["url"])}")
 
     if(include_params):
         print_params(target_url=current_node, identation=identation)
@@ -29,4 +31,4 @@ def print_url_tree(current_node, node_number="1", identation = "", include_param
 def print_params(target_url=False, identation=""):
     if("params" in target_url):    
         for param in target_url["params"]:
-            print(f"{identation} {param}")
+            print(f"{identation} {sanitize(text=param)}")
