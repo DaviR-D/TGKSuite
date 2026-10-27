@@ -39,6 +39,14 @@ TeigekiSuite is a lightweight, modular web-security toolkit focused on crawling,
 python3 main.py -u target.com
 ```
 
+### Automatic recon
+
+```bash
+python3 main.py -u target.com -a -cd 5
+```
+
+Crawls the target in depth (`-cd`, default 3), saves the JavaScript files found and exports the session.
+
 ### Load a previous session
 
 ```bash

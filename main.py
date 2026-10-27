@@ -16,6 +16,12 @@ cookies = dict()
 headers = dict()
 domains = list()
 
+def positive_int(value):
+    if not value.isdigit() or int(value) < 1:
+        raise argparse.ArgumentTypeError(f"expected a positive integer, got {value}")
+
+    return int(value)
+
 def add_args():
     parser = argparse.ArgumentParser(description="TeigekiSuite")
     parser.add_argument("-u", "--url", help="Target domain, e.g. example.com (crawled over https and used as the default scope)", metavar="domain")
@@ -25,6 +31,7 @@ def add_args():
     parser.add_argument("-c", "--cookie", help="Cookie (key=value)", action="append", metavar="cookie")
     parser.add_argument("-H", "--header", help="Custom HTTP header (\"Name: Value\", multiple uses supported)", action="append", metavar="header")
     parser.add_argument("-a", "--auto-recon", help="Perform deafult automatic recon", action="store_true")
+    parser.add_argument("-cd", "--crawl-depth", help="Crawling depth used by the automatic recon (default: 3)", type=positive_int, default=3, metavar="depth")
     args = parser.parse_args()
 
     return args
@@ -74,7 +81,7 @@ def load_args():
     domains.extend(domain.strip().lower().rstrip(".") for domain in args.domain or [])
 
     if(args.auto_recon):
-        auto_recon()
+        auto_recon(depth=args.crawl_depth)
         return '0'
 
     return 0
@@ -101,8 +108,8 @@ def handle_option(option):
     
     handle[int(option)]()
 
-def auto_recon():
-    deep_crawl(depth=3, cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
+def auto_recon(depth):
+    deep_crawl(depth=depth, cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
     filter_scripts(node=url_tree, domains=domains, cookies=cookies, headers=headers)
     print("\n\nAll javascript code saved in output/scripts.js")
     export_session(url_tree=url_tree)
