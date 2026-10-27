@@ -50,6 +50,12 @@ python3 main.py -is session.json
 python3 main.py -c "SESSIONID=12345; token=abcd"
 ```
 
+### Use custom headers
+
+```bash
+python3 main.py -u https://target.com -H "Authorization: Bearer abc123" -H "X-Api-Key: xyz"
+```
+
 ### Run fuzzing
 
 ```bash

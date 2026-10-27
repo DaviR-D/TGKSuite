@@ -1,17 +1,17 @@
 import requests
 import re
 
-def filter_scripts(node):
+def filter_scripts(node, headers=None):
     if(node['url'].endswith(".js")):
-        save_script(node['url'])
+        save_script(node['url'], headers=headers)
     
     if("childs" in node):
         for child_node in node["childs"]:
-            filter_scripts(child_node)
+            filter_scripts(child_node, headers=headers)
 
-def save_script(url):
+def save_script(url, headers=None):
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"Error while downloading {url}")

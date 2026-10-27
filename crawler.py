@@ -3,14 +3,14 @@ import requests
 import re
 from url_tree_handler import find_node_by_url
 
-def crawl(url, cookies, url_tree, domains=[]):
+def crawl(url, cookies, url_tree, domains=[], headers=None):
     child_urls = list()
     print("\n---------------------Root URL:---------------------")
     print(url)
     print("---------------------------------------------------\n")
 
     try:
-        response = requests.get(url, cookies=cookies)
+        response = requests.get(url, cookies=cookies, headers=headers)
     except requests.exceptions.TooManyRedirects:
         print(f"URL {url} got into redirect loop, continuing to the next...")
         return child_urls
@@ -57,10 +57,10 @@ def crawl(url, cookies, url_tree, domains=[]):
 
     return child_urls
 
-def crawl_one(node, cookies, url_tree, domains=[]):
-    node["childs"] = crawl(node["url"], cookies, url_tree=url_tree, domains=domains)
+def crawl_one(node, cookies, url_tree, domains=[], headers=None):
+    node["childs"] = crawl(node["url"], cookies, url_tree=url_tree, domains=domains, headers=headers)
 
-def crawl_all(node, cookies, url_tree, domains=[], visited=None):
+def crawl_all(node, cookies, url_tree, domains=[], visited=None, headers=None):
 
     if visited is None:
         visited = set()
@@ -72,9 +72,9 @@ def crawl_all(node, cookies, url_tree, domains=[], visited=None):
 
     if("childs" in node and len(node['childs']) > 0):
         for child_node in node["childs"]:
-            crawl_all(child_node, cookies, url_tree=url_tree, domains=domains, visited=visited)
+            crawl_all(child_node, cookies, url_tree=url_tree, domains=domains, visited=visited, headers=headers)
     else:
-        crawl_one(node, cookies, url_tree=url_tree, domains=domains)
+        crawl_one(node, cookies, url_tree=url_tree, domains=domains, headers=headers)
 
 def check_domain(url, domains):
     if not domains:
@@ -107,6 +107,6 @@ def check_valid_url(new_url, new_nodes, domains, url_tree, query_params):
         
     return True
 
-def deep_crawl(depth, cookies, url_tree, domains=[]):
+def deep_crawl(depth, cookies, url_tree, domains=[], headers=None):
     for i in range(0, depth):
-        crawl_all(node=url_tree, cookies=cookies, url_tree=url_tree, domains=domains)
+        crawl_all(node=url_tree, cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
