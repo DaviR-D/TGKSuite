@@ -58,7 +58,7 @@ def crawl(url, cookies, url_tree, domains=[], headers=None):
     return child_urls
 
 def crawl_one(node, cookies, url_tree, domains=[], headers=None):
-    node["childs"] = crawl(node["url"], cookies, url_tree=url_tree, domains=domains, headers=headers)
+    node["childs"] = crawl(url=node["url"], cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
 
 def crawl_all(node, cookies, url_tree, domains=[], visited=None, headers=None):
 
@@ -72,9 +72,9 @@ def crawl_all(node, cookies, url_tree, domains=[], visited=None, headers=None):
 
     if("childs" in node and len(node['childs']) > 0):
         for child_node in node["childs"]:
-            crawl_all(child_node, cookies, url_tree=url_tree, domains=domains, visited=visited, headers=headers)
+            crawl_all(node=child_node, cookies=cookies, url_tree=url_tree, domains=domains, visited=visited, headers=headers)
     else:
-        crawl_one(node, cookies, url_tree=url_tree, domains=domains, headers=headers)
+        crawl_one(node=node, cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
 
 def check_domain(url, domains):
     if not domains:

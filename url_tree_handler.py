@@ -9,7 +9,7 @@ def find_node_by_number(number, node):
         next_index = int(index_array[0]) - 1
         next_node = node["childs"][next_index]
 
-        return find_node_by_number(".".join(index_array), next_node)
+        return find_node_by_number(number=".".join(index_array), node=next_node)
     
 def find_node_by_url(url, node):
     if(node['url'] == url):

@@ -9,9 +9,9 @@ def fuzz(target, wordlist_path, cookies, delay_time=0, headers=None):
     output_file_name = '-'.join(target.split('/'))
 
     with open(f"output/{output_file_name}.txt", 'w+', encoding='utf-8') as output:
-        wordlist = loadWordlist(wordlist_path)
+        wordlist = loadWordlist(file_path=wordlist_path)
         for payload in wordlist:
-            response = exception_safe_request(target, payload, cookies, headers)
+            response = exception_safe_request(target=target, payload=payload, cookies=cookies, headers=headers)
             result = f"{response.status_code} | {payload} | {response.elapsed.total_seconds()}"
             output.write(result + "\n")
             print(result)
@@ -30,6 +30,6 @@ def fuzzing(target_url, fuzzing_wordlist, cookies, headers=None):
 
     print()
         
-    fuzz(target_url["url"], fuzzing_wordlist, cookies, headers=headers)
+    fuzz(target=target_url["url"], wordlist_path=fuzzing_wordlist, cookies=cookies, headers=headers)
 
     print()

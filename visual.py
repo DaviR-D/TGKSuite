@@ -18,13 +18,13 @@ def print_url_tree(current_node, node_number="1", identation = "", include_param
     print(f"{identation}{node_number}. {current_node["url"]}")
 
     if(include_params):
-        print_params(current_node, identation=identation)
+        print_params(target_url=current_node, identation=identation)
 
     print()
 
     if("childs" in current_node):
         for child_node, index in zip(current_node["childs"], range(0, len(current_node["childs"]))):
-            print_url_tree(child_node, f"{node_number}.{index+1}", f"{identation}  ", include_params=include_params)
+            print_url_tree(current_node=child_node, node_number=f"{node_number}.{index+1}", identation=f"{identation}  ", include_params=include_params)
 
 def print_params(target_url=False, identation=""):
     if("params" in target_url):    

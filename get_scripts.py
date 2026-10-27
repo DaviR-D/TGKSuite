@@ -3,11 +3,11 @@ import re
 
 def filter_scripts(node, headers=None):
     if(node['url'].endswith(".js")):
-        save_script(node['url'], headers=headers)
+        save_script(url=node['url'], headers=headers)
     
     if("childs" in node):
         for child_node in node["childs"]:
-            filter_scripts(child_node, headers=headers)
+            filter_scripts(node=child_node, headers=headers)
 
 def save_script(url, headers=None):
     try:

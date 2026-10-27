@@ -70,16 +70,16 @@ def handle_option(option):
 
     handle = {
     0: lambda: print(),
-    1: lambda: fuzzing(find_node_by_number(input("Target URL: "), url_tree), fuzzing_wordlist, cookies, headers=headers),
-    2: lambda: crawl_one(find_node_by_number(input("Target URL: "), url_tree), cookies, url_tree=url_tree, domains=domains, headers=headers),
+    1: lambda: fuzzing(target_url=find_node_by_number(number=input("Target URL: "), node=url_tree), fuzzing_wordlist=fuzzing_wordlist, cookies=cookies, headers=headers),
+    2: lambda: crawl_one(node=find_node_by_number(number=input("Target URL: "), node=url_tree), cookies=cookies, url_tree=url_tree, domains=domains, headers=headers),
     3: lambda: print_url_tree(current_node=url_tree),
-    4: lambda: print_params(find_node_by_number(input("Target URL: "), url_tree)),
+    4: lambda: print_params(target_url=find_node_by_number(number=input("Target URL: "), node=url_tree)),
     5: lambda: print_url_tree(current_node=url_tree, include_params=True),
     6: lambda: crawl_all(node=url_tree, cookies=cookies, url_tree=url_tree, domains=domains, headers=headers),
     7: lambda: deep_crawl(depth=int(input("Depth: ")), cookies=cookies, url_tree=url_tree, domains=domains, headers=headers),
     8: lambda: filter_scripts(node=url_tree, headers=headers),
     9: lambda: export_session(url_tree=url_tree),
-    10: lambda: import_session(url_tree),
+    10: lambda: import_session(url_tree=url_tree),
 }
     
     handle[int(option)]()
@@ -100,7 +100,7 @@ def main():
 
         print()
 
-        handle_option(option)
+        handle_option(option=option)
 
 
 if __name__ == "__main__":
