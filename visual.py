@@ -12,12 +12,11 @@ def print_menu():
     print("7) Crawl all URLs in-depth")
     print("8) Save scripts")
     print("9) Export URL tree")
-    print("10) Import URL tree")
     print("0) Exit")
     print()
 
 def print_url_tree(current_node, node_number="1", identation = "", include_params=False):
-    print(f"{identation}{node_number}. {sanitize(text=current_node["url"])}")
+    print(f"{identation}{node_number}. {sanitize(text=current_node['url'])}")
 
     if(include_params):
         print_params(target_url=current_node, identation=identation)

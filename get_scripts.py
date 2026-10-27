@@ -19,7 +19,7 @@ def save_script(url, domains, cookies=None, headers=None):
         return
 
     if response.status_code == 200:
-        formatted_url = safe_filename(name=url)
+        formatted_url = safe_filename(name=url.removesuffix(".js"), extension=".js")
         print(sanitize(text=url))
-        with open(f"output/{formatted_url}", "a", encoding="utf-8") as f:
+        with open(f"output/{formatted_url}", "w", encoding="utf-8") as f:
             f.write(f"//{url}\n\n" + response.text)

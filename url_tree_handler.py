@@ -1,16 +1,20 @@
 def find_node_by_number(number, node):
-    index_array = number.split(".")
-    index_array.pop(0)
-    
-    if(len(index_array) == 0):
-        return node
-    
-    else:
-        next_index = int(index_array[0]) - 1
-        next_node = node["childs"][next_index]
+    index_array = number.strip().split(".")
 
-        return find_node_by_number(number=".".join(index_array), node=next_node)
-    
+    if(index_array[0] != "1"):
+        raise ValueError(f"URL number must start with 1 (e.g. 1.2.1), got {number}")
+
+    for index in index_array[1:]:
+        child_nodes = node.get("childs", [])
+
+        if(not index.isdigit() or not 1 <= int(index) <= len(child_nodes)):
+            raise ValueError(f"URL {number} doesn't exist")
+
+        node = child_nodes[int(index) - 1]
+
+    return node
+
+
 def find_node_by_url(url, node):
     if(node['url'] == url):
         return node

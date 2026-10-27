@@ -6,6 +6,7 @@ from url_tree_handler import *
 from get_scripts import filter_scripts
 from urllib.parse import urlparse
 import argparse
+import os
 import re
 
 
@@ -36,14 +37,24 @@ def add_args():
 
     return args
 
-def parse_target_domain(target):
-    target = target.strip().lower().rstrip(".")
+def read_positive_int(prompt):
+    value = input(prompt).strip()
 
-    if not re.fullmatch(r'[a-z0-9.-]+(:[0-9]{1,5})?', target):
-        print(f"Invalid target domain (expected e.g. example.com): {target}")
+    if not value.isdigit() or int(value) < 1:
+        raise ValueError(f"expected a positive integer, got {value}")
+
+    return int(value)
+
+def parse_domain(domain, allow_port=False):
+    domain = domain.strip().lower().rstrip(".")
+    port_regex = r'(:[0-9]{1,5})?' if allow_port else ''
+
+    if not re.fullmatch(r'[a-z0-9-]+(\.[a-z0-9-]+)*' + port_regex, domain):
+        print(f"Invalid domain (expected e.g. example.com, without scheme or path{'' if allow_port else ' or port'}): {domain}")
         exit(1)
 
-    return target
+    # 443 is the https default, keeping it would duplicate URLs found without it
+    return domain.removesuffix(":443")
 
 def load_args():
     global fuzzing_wordlist
@@ -53,6 +64,9 @@ def load_args():
     args = add_args()
 
     for cookie in args.cookie or []:
+        if '=' not in cookie:
+            print(f"Invalid cookie (expected \"key=value\"): {cookie}")
+            exit(1)
         key, value = cookie.split('=', 1)
         cookies[key] = value
 
@@ -64,13 +78,17 @@ def load_args():
         headers[key.strip()] = value.strip()
 
     if(args.url):
-        url_tree["url"] = f"https://{parse_target_domain(target=args.url)}"
+        url_tree["url"] = f"https://{parse_domain(domain=args.url, allow_port=True)}"
         url_tree['params'] = list()
 
     fuzzing_wordlist = args.fuzzer_wordlist
 
     if(args.import_session):
-        import_session(url_tree=url_tree, import_file=args.import_session)
+        try:
+            import_session(url_tree=url_tree, import_file=args.import_session)
+        except (OSError, ValueError) as error:
+            print(f"Could not import session {args.import_session}: {error}")
+            exit(1)
 
     if(not url_tree.get("url")):
         print("A target is required: use -u <domain> or -is <session>")
@@ -78,7 +96,7 @@ def load_args():
 
     # The target domain is always in scope, -d adds extra domains
     domains = [urlparse(url_tree["url"]).hostname]
-    domains.extend(domain.strip().lower().rstrip(".") for domain in args.domain or [])
+    domains.extend(parse_domain(domain=domain) for domain in args.domain or [])
 
     if(args.auto_recon):
         auto_recon(depth=args.crawl_depth)
@@ -100,21 +118,35 @@ def handle_option(option):
     4: lambda: print_params(target_url=find_node_by_number(number=input("Target URL: "), node=url_tree)),
     5: lambda: print_url_tree(current_node=url_tree, include_params=True),
     6: lambda: crawl_all(node=url_tree, cookies=cookies, url_tree=url_tree, domains=domains, headers=headers),
-    7: lambda: deep_crawl(depth=int(input("Depth: ")), cookies=cookies, url_tree=url_tree, domains=domains, headers=headers),
+    7: lambda: deep_crawl(depth=read_positive_int(prompt="Depth: "), cookies=cookies, url_tree=url_tree, domains=domains, headers=headers),
     8: lambda: filter_scripts(node=url_tree, domains=domains, cookies=cookies, headers=headers),
     9: lambda: export_session(url_tree=url_tree),
-    10: lambda: import_session(url_tree=url_tree),
 }
-    
-    handle[int(option)]()
+
+    option = option.strip()
+
+    if(not option.isdigit() or int(option) not in handle):
+        print(f"Invalid option: {option}")
+        return
+
+    # Invalid URL numbers or depths only cancel the option, the session stays alive
+    try:
+        handle[int(option)]()
+    except ValueError as error:
+        print(f"Invalid input: {error}")
 
 def auto_recon(depth):
-    deep_crawl(depth=depth, cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
-    filter_scripts(node=url_tree, domains=domains, cookies=cookies, headers=headers)
-    print("\n\nAll javascript code saved in output/scripts.js")
-    export_session(url_tree=url_tree)
+    # Export even if something fails midway, so the crawled tree isn't lost
+    try:
+        deep_crawl(depth=depth, cookies=cookies, url_tree=url_tree, domains=domains, headers=headers)
+        filter_scripts(node=url_tree, domains=domains, cookies=cookies, headers=headers)
+        print("\n\nJavascript files saved in output/")
+    finally:
+        export_session(url_tree=url_tree)
 
 def main():
+    os.makedirs("output", exist_ok=True)
+
     option = load_args()
 
     while option != "0":

@@ -12,13 +12,19 @@ STATIC_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".webp", "
 def normalize_link(link, base_url):
     try:
         parsed = urlparse(urljoin(base_url, link))
+
+        # Backslash URLs are ambiguous between parsers, rebuilding them would silently change their host
+        if parsed.scheme not in ("http", "https") or not parsed.hostname or "\\" in parsed.netloc:
+            return None, []
+
+        # Hosts are case insensitive and default ports are implicit, so both are normalized to avoid duplicates
+        netloc = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+        if parsed.port is not None and parsed.port != {"http": 80, "https": 443}[parsed.scheme]:
+            netloc = f"{netloc}:{parsed.port}"
     except ValueError:
         return None, []
 
-    if parsed.scheme not in ("http", "https"):
-        return None, []
-
-    child_url = parsed._replace(query="", fragment="").geturl().rstrip("/")
+    child_url = parsed._replace(netloc=netloc, query="", fragment="").geturl().rstrip("/")
     query_params = [param for param in parsed.query.split("&") if param]
 
     return child_url, query_params

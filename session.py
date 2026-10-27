@@ -6,11 +6,12 @@ def export_session(url_tree):
 
     print("Session written in output/url_tree.json")
 
-def import_session(url_tree, import_file=None):
-    if(not import_file):
-        import_file = input("File to import: ")
-
+def import_session(url_tree, import_file):
     with open(import_file, "r", encoding="utf-8") as file:
         data = json.load(file)
+
+    if(not isinstance(data, dict) or not isinstance(data.get("url"), str)):
+        raise ValueError("not a TeigekiSuite session (missing root URL)")
+
     url_tree.clear()
     url_tree.update(data)

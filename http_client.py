@@ -47,15 +47,17 @@ def check_domain(url, domains):
     return False
 
 def safe_get(url, domains, cookies=None, headers=None, timeout=DEFAULT_TIMEOUT):
-    for _ in range(MAX_REDIRECTS + 1):
-        if not check_domain(url=url, domains=domains):
-            raise OutOfScopeError(f"Out of scope or invalid URL blocked: {sanitize(text=url)}")
+    # The session keeps cookies set by intermediate redirects (e.g. login flows)
+    with requests.Session() as session:
+        for _ in range(MAX_REDIRECTS + 1):
+            if not check_domain(url=url, domains=domains):
+                raise OutOfScopeError(f"Out of scope or invalid URL blocked: {sanitize(text=url)}")
 
-        response = requests.get(url, cookies=cookies, headers=headers, timeout=timeout, allow_redirects=False)
+            response = session.get(url, cookies=cookies, headers=headers, timeout=timeout, allow_redirects=False)
 
-        if not response.is_redirect:
-            return response
+            if not response.is_redirect:
+                return response
 
-        url = urljoin(response.url, response.headers["Location"])
+            url = urljoin(response.url, response.headers["Location"])
 
     raise requests.exceptions.TooManyRedirects(f"Exceeded {MAX_REDIRECTS} redirects")

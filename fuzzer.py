@@ -7,13 +7,18 @@ MAX_RETRIES = 3
 
 def loadWordlist(file_path):
     with open(file_path, 'r', encoding='utf-8') as wordlist:
-        return wordlist.read().split('\n')
+        return [line for line in wordlist.read().split('\n') if line.strip()]
 
 def fuzz(target, wordlist_path, cookies, domains, delay_time=0, headers=None):
-    output_file_name = safe_filename(name=target)
+    output_file_name = safe_filename(name=target, extension=".txt")
 
-    with open(f"output/{output_file_name}.txt", 'w+', encoding='utf-8') as output:
+    try:
         wordlist = loadWordlist(file_path=wordlist_path)
+    except (OSError, UnicodeDecodeError) as error:
+        print(f"Could not read wordlist {wordlist_path}: {error}")
+        return
+
+    with open(f"output/{output_file_name}", 'w+', encoding='utf-8') as output:
         for payload in wordlist:
             response = exception_safe_request(target=target, payload=payload, cookies=cookies, domains=domains, headers=headers)
             if isinstance(response, str):
