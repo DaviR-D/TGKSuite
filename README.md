@@ -11,7 +11,7 @@ TeigekiSuite is a lightweight, modular web-security toolkit focused on crawling,
 * Recursively parses web pages and extracts links.
 * Builds a structured URL tree representing application navigation.
 * Supports optional cookies and custom headers for authenticated crawling.
-* Stays inside the target scope: the `-u` domain (and its subdomains) plus any `-d` domains. Redirects to other hosts are blocked, so credentials are never sent out of scope.
+* Stays inside the target scope: the `-t` domain (and its subdomains) plus any `-d` domains. Redirects to other hosts are blocked, so credentials are never sent out of scope.
 
 ### 🧪 Fuzzer
 
@@ -36,13 +36,13 @@ TeigekiSuite is a lightweight, modular web-security toolkit focused on crawling,
 ### Start crawling
 
 ```bash
-python3 main.py -u target.com
+python3 main.py -t target.com
 ```
 
 ### Automatic recon
 
 ```bash
-python3 main.py -u target.com -a -cd 5
+python3 main.py -t target.com -a -cd 5
 ```
 
 Crawls the target in depth (`-cd`, default 3), saves the JavaScript files found and exports the session.
@@ -56,25 +56,25 @@ python3 main.py -is session.json
 ### Use cookies
 
 ```bash
-python3 main.py -u target.com -c "SESSIONID=12345"
+python3 main.py -t target.com -c "SESSIONID=12345"
 ```
 
 ### Add extra in-scope domains
 
 ```bash
-python3 main.py -u target.com -d api.othertarget.com
+python3 main.py -t target.com -d api.othertarget.com
 ```
 
 ### Use custom headers
 
 ```bash
-python3 main.py -u target.com -H "Authorization: Bearer abc123" -H "X-Api-Key: xyz"
+python3 main.py -t target.com -H "Authorization: Bearer abc123" -H "X-Api-Key: xyz"
 ```
 
 ### Run fuzzing
 
 ```bash
-python3 main.py -u target.com -fw wordlists/common.txt
+python3 main.py -t target.com -fw wordlists/common.txt
 ```
 
 ## **How It Works**

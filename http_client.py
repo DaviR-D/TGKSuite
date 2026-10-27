@@ -14,6 +14,7 @@ class OutOfScopeError(Exception):
     pass
 
 def get_url_host(url):
+    """Returns the URL's host, or None when the URL is invalid, not https, or ambiguous between parsers."""
     if FORBIDDEN_URL_CHARS.search(url):
         return None
 
@@ -41,19 +42,20 @@ def check_domain(url, domains):
         return False
 
     for domain in domains:
-        if(url_host == domain or url_host.endswith(f'.{domain}')):
+        if url_host == domain or url_host.endswith(f".{domain}"):
             return True
 
     return False
 
-def safe_get(url, domains, cookies=None, headers=None, timeout=DEFAULT_TIMEOUT):
+def safe_get(url, scan, timeout=DEFAULT_TIMEOUT):
+    """GET that follows redirects only while they stay in scope, sending the scan's cookies and headers."""
     # The session keeps cookies set by intermediate redirects (e.g. login flows)
     with requests.Session() as session:
         for _ in range(MAX_REDIRECTS + 1):
-            if not check_domain(url=url, domains=domains):
+            if not check_domain(url=url, domains=scan.domains):
                 raise OutOfScopeError(f"Out of scope or invalid URL blocked: {sanitize(text=url)}")
 
-            response = session.get(url, cookies=cookies, headers=headers, timeout=timeout, allow_redirects=False)
+            response = session.get(url, cookies=scan.cookies, headers=scan.headers, timeout=timeout, allow_redirects=False)
 
             if not response.is_redirect:
                 return response
