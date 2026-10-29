@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from rate_limit import RateLimiter
 
 @dataclass
 class Scan:
@@ -8,3 +9,4 @@ class Scan:
     cookies: dict = field(default_factory=dict)
     headers: dict = field(default_factory=dict)
     log_requests: bool = False
+    rate_limiter: RateLimiter = field(default_factory=RateLimiter)

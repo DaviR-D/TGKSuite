@@ -49,10 +49,12 @@ def check_domain(url, domains):
     return False
 
 def send_request(session, url, scan, timeout):
-    """Sends a single GET (no redirects). With request logging on, saves the request with its response or error."""
+    """Sends a single GET (no redirects), respecting the rate limit. With request logging on, saves the request with its response or error."""
     request = session.prepare_request(requests.Request("GET", url, cookies=scan.cookies, headers=scan.headers))
     # Same environment settings session.get would apply (proxies, CA bundle...)
     settings = session.merge_environment_settings(url=request.url, proxies={}, stream=None, verify=None, cert=None)
+
+    scan.rate_limiter.wait()
 
     try:
         response = session.send(request, timeout=timeout, allow_redirects=False, **settings)

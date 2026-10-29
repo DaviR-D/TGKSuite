@@ -20,6 +20,11 @@ TeigekiSuite is a lightweight, modular web-security toolkit focused on crawling,
 * Stores results in organized output files.
 * Works seamlessly with the crawler's URL tree.
 
+### ⏱️ Rate Limiting
+
+* With `-r N`, at most N requests per second are sent, across every feature (crawler, fuzzer, script download, redirect hops and retries).
+* Fractions work for slower rates: `-r 0.5` sends one request every 2 seconds.
+
 ### 📝 Request Logging
 
 * With `-l`, every HTTP request made by any feature (crawler, fuzzer, script download, redirects included) is saved in `logs/`. Without it nothing is logged.
@@ -75,6 +80,12 @@ python3 main.py -t target.com -d api.othertarget.com
 
 ```bash
 python3 main.py -t target.com -H "Authorization: Bearer abc123" -H "X-Api-Key: xyz"
+```
+
+### Limit the request rate
+
+```bash
+python3 main.py -t target.com -a -r 2
 ```
 
 ### Log every request and response

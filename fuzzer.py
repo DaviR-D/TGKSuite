@@ -24,7 +24,7 @@ def request_payload(url, scan):
 
     return "ERROR", "-"
 
-def fuzz(node, wordlist_path, scan, delay_time=0):
+def fuzz(node, wordlist_path, scan):
     try:
         wordlist = load_wordlist(file_path=wordlist_path)
     except (OSError, UnicodeDecodeError) as error:
@@ -41,6 +41,5 @@ def fuzz(node, wordlist_path, scan, delay_time=0):
             result = f"{status} | {payload} | {elapsed}"
             output.write(result + "\n")
             print(result)
-            sleep(delay_time)
 
     print()

@@ -1,9 +1,11 @@
 from urllib.parse import urlparse
 import argparse
+import math
 import os
 import re
 from crawler import crawl_one, crawl_all, deep_crawl
 from fuzzer import fuzz
+from rate_limit import RateLimiter
 from request_log import LOGS_DIR, create_logs_dir
 from scan import Scan
 from scripts import save_scripts
@@ -28,6 +30,7 @@ EXAMPLES = [
     ("-t example.com -c session=abc -H \"Authorization: Bearer xyz\"", "authenticated crawling"),
     (f"-is {OUTPUT_DIR}/url_tree.json", "resume a previous session"),
     ("-t example.com -a -l", f"automatic recon saving every request and response in {LOGS_DIR}/"),
+    ("-t example.com -a -r 2", "automatic recon sending at most 2 requests per second"),
 ]
 
 def build_epilog():
@@ -56,8 +59,9 @@ def build_parser():
     fuzzing = parser.add_argument_group("fuzzing")
     fuzzing.add_argument("-fw", "--fuzzer-wordlist", metavar="FILE", help="wordlist used by the menu's fuzz option (asked for when omitted)")
 
-    logging = parser.add_argument_group("logging")
-    logging.add_argument("-l", "--log-requests", action="store_true", help=f"save every request and its full response in {LOGS_DIR}/, one file each (includes cookies and auth headers)")
+    requests_group = parser.add_argument_group("requests")
+    requests_group.add_argument("-r", "--rate-limit", metavar="N", type=float, help="send at most N requests per second, in every feature (e.g. 5, or 0.5 for one every 2s); unlimited by default")
+    requests_group.add_argument("-l", "--log-requests", action="store_true", help=f"save every request and its full response in {LOGS_DIR}/, one file each (includes cookies and auth headers)")
 
     return parser
 
@@ -109,7 +113,8 @@ def build_scan(args):
     cookies = dict(parse_key_value(item=cookie, separator="=", expected_format="key=value") for cookie in args.cookie or [])
     headers = dict(parse_key_value(item=header, separator=":", expected_format="Name: Value") for header in args.header or [])
 
-    return Scan(url_tree=url_tree, domains=domains, cookies=cookies, headers=headers, log_requests=args.log_requests)
+    return Scan(url_tree=url_tree, domains=domains, cookies=cookies, headers=headers, log_requests=args.log_requests,
+                rate_limiter=RateLimiter(requests_per_second=args.rate_limit))
 
 def run_auto_recon(scan, depth):
     # Export even if something fails midway, so the crawled tree isn't lost
@@ -163,6 +168,9 @@ def run_menu(scan, fuzzing_wordlist):
 def main():
     parser = build_parser()
     args = parser.parse_args()
+
+    if args.rate_limit is not None and not (math.isfinite(args.rate_limit) and args.rate_limit > 0):
+        parser.error(f"argument -r/--rate-limit: expected a positive number, got {args.rate_limit}")
 
     if args.crawl_depth < 1:
         parser.error(f"argument -cd/--crawl-depth: expected a positive integer, got {args.crawl_depth}")
