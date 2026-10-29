@@ -4,6 +4,7 @@ import os
 import re
 from crawler import crawl_one, crawl_all, deep_crawl
 from fuzzer import fuzz
+from request_log import LOGS_DIR, create_logs_dir
 from scan import Scan
 from scripts import save_scripts
 from session import export_session, import_session
@@ -26,6 +27,7 @@ EXAMPLES = [
     ("-t example.com -d api.example.net", "also allow requests to api.example.net"),
     ("-t example.com -c session=abc -H \"Authorization: Bearer xyz\"", "authenticated crawling"),
     (f"-is {OUTPUT_DIR}/url_tree.json", "resume a previous session"),
+    ("-t example.com -a -l", f"automatic recon saving every request and response in {LOGS_DIR}/"),
 ]
 
 def build_epilog():
@@ -53,6 +55,9 @@ def build_parser():
 
     fuzzing = parser.add_argument_group("fuzzing")
     fuzzing.add_argument("-fw", "--fuzzer-wordlist", metavar="FILE", help="wordlist used by the menu's fuzz option (asked for when omitted)")
+
+    logging = parser.add_argument_group("logging")
+    logging.add_argument("-l", "--log-requests", action="store_true", help=f"save every request and its full response in {LOGS_DIR}/, one file each (includes cookies and auth headers)")
 
     return parser
 
@@ -104,7 +109,7 @@ def build_scan(args):
     cookies = dict(parse_key_value(item=cookie, separator="=", expected_format="key=value") for cookie in args.cookie or [])
     headers = dict(parse_key_value(item=header, separator=":", expected_format="Name: Value") for header in args.header or [])
 
-    return Scan(url_tree=url_tree, domains=domains, cookies=cookies, headers=headers)
+    return Scan(url_tree=url_tree, domains=domains, cookies=cookies, headers=headers, log_requests=args.log_requests)
 
 def run_auto_recon(scan, depth):
     # Export even if something fails midway, so the crawled tree isn't lost
@@ -168,6 +173,9 @@ def main():
         parser.error(str(error))
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    if scan.log_requests:
+        create_logs_dir()
 
     if args.auto_recon:
         run_auto_recon(scan=scan, depth=args.crawl_depth)

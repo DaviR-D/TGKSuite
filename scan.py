@@ -7,3 +7,4 @@ class Scan:
     domains: list
     cookies: dict = field(default_factory=dict)
     headers: dict = field(default_factory=dict)
+    log_requests: bool = False

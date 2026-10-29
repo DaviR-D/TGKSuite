@@ -1,3 +1,4 @@
 wordlists/*
 output/*
 __pycache__/
+logs/

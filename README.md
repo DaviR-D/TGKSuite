@@ -20,6 +20,12 @@ TeigekiSuite is a lightweight, modular web-security toolkit focused on crawling,
 * Stores results in organized output files.
 * Works seamlessly with the crawler's URL tree.
 
+### 📝 Request Logging
+
+* With `-l`, every HTTP request made by any feature (crawler, fuzzer, script download, redirects included) is saved in `logs/`. Without it nothing is logged.
+* One file per request with the full request and response (status, headers and body), or the error when no response arrived.
+* Logs include cookies and auth headers, so the folder and files are readable only by the current user and ignored by git.
+
 ### 📁 Session Management
 
 * Save and load sessions to continue work later.
@@ -69,6 +75,12 @@ python3 main.py -t target.com -d api.othertarget.com
 
 ```bash
 python3 main.py -t target.com -H "Authorization: Bearer abc123" -H "X-Api-Key: xyz"
+```
+
+### Log every request and response
+
+```bash
+python3 main.py -t target.com -a -l
 ```
 
 ### Run fuzzing

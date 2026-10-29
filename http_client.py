@@ -2,6 +2,7 @@ from urllib.parse import urlparse, urljoin
 from urllib3.util import parse_url
 import requests
 import re
+from request_log import log_exchange
 from utils import sanitize
 
 MAX_REDIRECTS = 10
@@ -47,6 +48,24 @@ def check_domain(url, domains):
 
     return False
 
+def send_request(session, url, scan, timeout):
+    """Sends a single GET (no redirects). With request logging on, saves the request with its response or error."""
+    request = session.prepare_request(requests.Request("GET", url, cookies=scan.cookies, headers=scan.headers))
+    # Same environment settings session.get would apply (proxies, CA bundle...)
+    settings = session.merge_environment_settings(url=request.url, proxies={}, stream=None, verify=None, cert=None)
+
+    try:
+        response = session.send(request, timeout=timeout, allow_redirects=False, **settings)
+    except requests.exceptions.RequestException as error:
+        if scan.log_requests:
+            log_exchange(request=request, error=error)
+        raise
+
+    if scan.log_requests:
+        log_exchange(request=request, response=response)
+
+    return response
+
 def safe_get(url, scan, timeout=DEFAULT_TIMEOUT):
     """GET that follows redirects only while they stay in scope, sending the scan's cookies and headers."""
     # The session keeps cookies set by intermediate redirects (e.g. login flows)
@@ -55,7 +74,7 @@ def safe_get(url, scan, timeout=DEFAULT_TIMEOUT):
             if not check_domain(url=url, domains=scan.domains):
                 raise OutOfScopeError(f"Out of scope or invalid URL blocked: {sanitize(text=url)}")
 
-            response = session.get(url, cookies=scan.cookies, headers=scan.headers, timeout=timeout, allow_redirects=False)
+            response = send_request(session=session, url=url, scan=scan, timeout=timeout)
 
             if not response.is_redirect:
                 return response
