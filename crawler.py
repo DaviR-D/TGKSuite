@@ -2,6 +2,7 @@ from urllib.parse import urlparse, urljoin
 import requests
 from extractor import extract_links
 from http_client import check_domain, safe_get, OutOfScopeError
+from scripts import save_inline_scripts
 from url_tree import index_nodes_by_url, new_node
 from utils import sanitize
 
@@ -65,7 +66,7 @@ def collect_child_nodes(response, scan):
         link_base_url = base_url if link["url"] else response.url
         url, query_params = normalize_link(link=link["url"], base_url=link_base_url)
 
-        if url is None or not check_domain(url=url, domains=scan.domains):
+        if url is None or not check_domain(url=url, domains=scan.domains, excluded=scan.excluded_domains):
             continue
 
         params = query_params + link["params"]
@@ -95,6 +96,9 @@ def crawl(url, scan):
 
     if response is None:
         return None
+
+    # Inline scripts live only in the HTML, so they're saved now while the response is in hand
+    save_inline_scripts(response=response, scan=scan)
 
     child_nodes = collect_child_nodes(response=response, scan=scan)
     print_found_nodes(nodes=child_nodes)

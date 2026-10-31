@@ -1,5 +1,6 @@
 import os
 import requests
+from extractor import extract_inline_scripts
 from http_client import safe_get, OutOfScopeError
 from utils import OUTPUT_DIR, sanitize, safe_filename
 
@@ -29,3 +30,17 @@ def save_script(url, scan):
 
     with open(output_path, "w", encoding="utf-8") as script_file:
         script_file.write(f"//{url}\n\n{response.text}")
+
+def save_inline_scripts(response, scan):
+    """Saves the inline <script> blocks of an HTML page as .js files in the output directory.
+
+    Each file keeps the page URL on the first line (with an #inline-N marker) so the
+    static analysis can trace it back to its origin, just like downloaded .js files."""
+    inline_scripts = extract_inline_scripts(text=response.text, content_type=response.headers.get("Content-Type", ""))
+
+    for index, script in enumerate(inline_scripts, start=1):
+        marker = f"{response.url}#inline-{index}"
+        output_path = os.path.join(OUTPUT_DIR, safe_filename(name=marker, extension=".js"))
+
+        with open(output_path, "w", encoding="utf-8") as script_file:
+            script_file.write(f"//{marker}\n\n{script}")

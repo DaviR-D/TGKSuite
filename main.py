@@ -27,6 +27,7 @@ EXAMPLES = [
     ("-t example.com -a", f"crawl {DEFAULT_CRAWL_DEPTH} levels, save scripts, export session"),
     ("-t example.com -a -cd 5", "automatic recon 5 levels deep"),
     ("-t example.com -d api.example.net", "also allow requests to api.example.net"),
+    ("-t example.com -x blog.example.com", "crawl example.com but never its blog subdomain"),
     ("-t example.com -c session=abc -H \"Authorization: Bearer xyz\"", "authenticated crawling"),
     (f"-is {OUTPUT_DIR}/url_tree.json", "resume a previous session"),
     ("-t example.com -a -l", f"automatic recon saving every request and response in {LOGS_DIR}/"),
@@ -47,6 +48,7 @@ def build_parser():
 
     scope = parser.add_argument_group("scope")
     scope.add_argument("-d", "--domain", metavar="DOMAIN", action="append", help="extra in-scope domain, subdomains included (repeatable)")
+    scope.add_argument("-x", "--exclude", metavar="DOMAIN", action="append", help="out-of-scope domain, subdomains included, blocked even under an in-scope domain (repeatable)")
 
     authentication = parser.add_argument_group("authentication")
     authentication.add_argument("-c", "--cookie", metavar="KEY=VALUE", action="append", help="cookie sent with every request (repeatable)")
@@ -110,11 +112,14 @@ def build_scan(args):
     domains = [urlparse(url_tree["url"]).hostname]
     domains.extend(parse_domain(domain=domain) for domain in args.domain or [])
 
+    # -x blocks domains even when they fall under an in-scope domain (e.g. an out-of-scope subdomain)
+    excluded_domains = [parse_domain(domain=domain) for domain in args.exclude or []]
+
     cookies = dict(parse_key_value(item=cookie, separator="=", expected_format="key=value") for cookie in args.cookie or [])
     headers = dict(parse_key_value(item=header, separator=":", expected_format="Name: Value") for header in args.header or [])
 
-    return Scan(url_tree=url_tree, domains=domains, cookies=cookies, headers=headers, log_requests=args.log_requests,
-                rate_limiter=RateLimiter(requests_per_second=args.rate_limit))
+    return Scan(url_tree=url_tree, domains=domains, excluded_domains=excluded_domains, cookies=cookies, headers=headers,
+                log_requests=args.log_requests, rate_limiter=RateLimiter(requests_per_second=args.rate_limit))
 
 def run_auto_recon(scan, depth):
     # Export even if something fails midway, so the crawled tree isn't lost

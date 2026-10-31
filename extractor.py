@@ -6,6 +6,11 @@ URL_ATTRIBUTES = {"href", "src", "action", "formaction", "data", "poster", "back
 SRCSET_ATTRIBUTES = {"srcset", "imagesrcset"}
 FORM_FIELD_TAGS = {"input", "select", "textarea", "button"}
 
+# A <script> without one of these types holds runnable JS; others (application/json,
+# text/x-template...) are data, not code, so they're skipped by the inline collector
+JS_SCRIPT_TYPES = {"", "module", "text/javascript", "application/javascript",
+                   "text/ecmascript", "application/ecmascript", "text/babel", "text/jsx"}
+
 # URLs inside scripts, JSON and inline code
 ABSOLUTE_URL_REGEX = re.compile(r'https?://[^\s"\'`<>\\)]+')
 QUOTED_PATH_REGEX = re.compile(r'["\'`](/[A-Za-z0-9_\-.~%][^"\'`\s<>\\]*)["\'`]')
@@ -56,6 +61,40 @@ class LinkParser(HTMLParser):
         if tag == "form":
             self.current_form = None
 
+class InlineScriptParser(HTMLParser):
+    """Collects the bodies of inline <script> tags (no src, and a JS type)."""
+
+    def __init__(self):
+        # Keep the script body verbatim; char references in JS must not be decoded
+        super().__init__(convert_charrefs=False)
+        self.scripts = list()
+        self.collecting = False
+        self.buffer = list()
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "script":
+            return
+
+        attributes = {name: (value or "") for name, value in attrs}
+        has_src = bool(attributes.get("src", "").strip())
+        script_type = attributes.get("type", "").strip().lower()
+
+        # HTMLParser switches to CDATA mode on <script>, so handle_data gets the raw body
+        self.collecting = not has_src and script_type in JS_SCRIPT_TYPES
+        self.buffer = list()
+
+    def handle_data(self, data):
+        if self.collecting:
+            self.buffer.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "script" and self.collecting:
+            body = "".join(self.buffer).strip()
+            if body:
+                self.scripts.append(body)
+            self.collecting = False
+            self.buffer = list()
+
 def is_html(content_type):
     # Responses without a Content-Type are treated as HTML
     return not content_type or "html" in content_type.lower()
@@ -91,3 +130,17 @@ def extract_links(text, content_type):
     links.extend({"url": match.group(1), "params": list()} for match in QUOTED_PATH_REGEX.finditer(text))
 
     return base_url, links
+
+def extract_inline_scripts(text, content_type):
+    """Returns the bodies of the page's inline <script> tags (empty for non-HTML)."""
+    if not is_html(content_type=content_type):
+        return []
+
+    parser = InlineScriptParser()
+    try:
+        parser.feed(text)
+        parser.close()
+    except (AssertionError, ValueError):
+        pass
+
+    return parser.scripts

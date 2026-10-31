@@ -36,17 +36,20 @@ def get_url_host(url):
 
     return parsed_host.rstrip(".")
 
-def check_domain(url, domains):
+def matches_any(url_host, domains):
+    return any(url_host == domain or url_host.endswith(f".{domain}") for domain in domains)
+
+def check_domain(url, domains, excluded=()):
+    """In scope when the host is under a domain and under no excluded domain (deny wins)."""
     url_host = get_url_host(url=url)
 
     if url_host is None:
         return False
 
-    for domain in domains:
-        if url_host == domain or url_host.endswith(f".{domain}"):
-            return True
+    if matches_any(url_host=url_host, domains=excluded):
+        return False
 
-    return False
+    return matches_any(url_host=url_host, domains=domains)
 
 def send_request(session, url, scan, timeout):
     """Sends a single GET (no redirects), respecting the rate limit. With request logging on, saves the request with its response or error."""
@@ -73,7 +76,7 @@ def safe_get(url, scan, timeout=DEFAULT_TIMEOUT):
     # The session keeps cookies set by intermediate redirects (e.g. login flows)
     with requests.Session() as session:
         for _ in range(MAX_REDIRECTS + 1):
-            if not check_domain(url=url, domains=scan.domains):
+            if not check_domain(url=url, domains=scan.domains, excluded=scan.excluded_domains):
                 raise OutOfScopeError(f"Out of scope or invalid URL blocked: {sanitize(text=url)}")
 
             response = send_request(session=session, url=url, scan=scan, timeout=timeout)
