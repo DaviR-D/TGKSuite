@@ -103,6 +103,11 @@ def crawl(url, scan):
     child_nodes = collect_child_nodes(response=response, scan=scan)
     print_found_nodes(nodes=child_nodes)
 
+    # Stream each newly found node to the sink (e.g. the -ia jsonl writer) as it's discovered
+    if scan.node_sink is not None:
+        for child_node in child_nodes:
+            scan.node_sink(child_node, url)
+
     return child_nodes
 
 def crawl_one(node, scan):

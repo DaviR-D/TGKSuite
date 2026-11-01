@@ -11,3 +11,5 @@ class Scan:
     headers: dict = field(default_factory=dict)
     log_requests: bool = False
     rate_limiter: RateLimiter = field(default_factory=RateLimiter)
+    # Called as node_sink(node, parent_url) for every node discovered, when set (used by -ia to stream the tree)
+    node_sink: object = None

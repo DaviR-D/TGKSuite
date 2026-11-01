@@ -1,3 +1,4 @@
+from contextlib import redirect_stdout
 from urllib.parse import urlparse
 import argparse
 import math
@@ -5,6 +6,7 @@ import os
 import re
 from crawler import crawl_one, crawl_all, deep_crawl
 from fuzzer import fuzz
+from jsonl_tree import JsonlTreeWriter, JSONL_PATH
 from rate_limit import RateLimiter
 from request_log import LOGS_DIR, create_logs_dir
 from scan import Scan
@@ -32,6 +34,7 @@ EXAMPLES = [
     (f"-is {OUTPUT_DIR}/url_tree.json", "resume a previous session"),
     ("-t example.com -a -l", f"automatic recon saving every request and response in {LOGS_DIR}/"),
     ("-t example.com -a -r 2", "automatic recon sending at most 2 requests per second"),
+    ("-t example.com -a -ia", f"silent automatic recon, streaming the URL tree to {JSONL_PATH} live"),
 ]
 
 def build_epilog():
@@ -57,6 +60,7 @@ def build_parser():
     recon = parser.add_argument_group("automatic recon")
     recon.add_argument("-a", "--auto-recon", action="store_true", help="crawl, save the javascript files found and export the session, without the menu")
     recon.add_argument("-cd", "--crawl-depth", metavar="N", type=int, default=DEFAULT_CRAWL_DEPTH, help=f"how many levels -a crawls (default: {DEFAULT_CRAWL_DEPTH})")
+    recon.add_argument("-ia", "--auto-recon-jsonl", action="store_true", help=f"with -a, print nothing and stream the URL tree to {JSONL_PATH} as it's crawled (one JSON node per line)")
 
     fuzzing = parser.add_argument_group("fuzzing")
     fuzzing.add_argument("-fw", "--fuzzer-wordlist", metavar="FILE", help="wordlist used by the menu's fuzz option (asked for when omitted)")
@@ -130,6 +134,21 @@ def run_auto_recon(scan, depth):
     finally:
         export_session(url_tree=scan.url_tree)
 
+def run_auto_recon_jsonl(scan, depth):
+    """Runs -a with no terminal output, streaming every node to the jsonl file as it's found."""
+    writer = JsonlTreeWriter()
+    scan.node_sink = writer.record
+
+    try:
+        # The root isn't found as anyone's child, so record it before crawling starts
+        writer.record(scan.url_tree)
+
+        # Everything -a prints is swallowed; the live jsonl file is the only output
+        with open(os.devnull, "w", encoding="utf-8") as devnull, redirect_stdout(devnull):
+            run_auto_recon(scan=scan, depth=depth)
+    finally:
+        writer.close()
+
 def ask_node(scan):
     return find_node_by_number(number=input("Target URL: "), node=scan.url_tree)
 
@@ -180,6 +199,9 @@ def main():
     if args.crawl_depth < 1:
         parser.error(f"argument -cd/--crawl-depth: expected a positive integer, got {args.crawl_depth}")
 
+    if args.auto_recon_jsonl and not args.auto_recon:
+        parser.error("argument -ia/--auto-recon-jsonl: only works together with -a/--auto-recon")
+
     try:
         scan = build_scan(args=args)
     except ValueError as error:
@@ -190,7 +212,9 @@ def main():
     if scan.log_requests:
         create_logs_dir()
 
-    if args.auto_recon:
+    if args.auto_recon and args.auto_recon_jsonl:
+        run_auto_recon_jsonl(scan=scan, depth=args.crawl_depth)
+    elif args.auto_recon:
         run_auto_recon(scan=scan, depth=args.crawl_depth)
     else:
         run_menu(scan=scan, fuzzing_wordlist=args.fuzzer_wordlist)

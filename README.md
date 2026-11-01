@@ -58,6 +58,14 @@ python3 main.py -t target.com -a -cd 5
 
 Crawls the target in depth (`-cd`, default 3), saves the JavaScript files found and exports the session.
 
+### Silent recon with a live JSONL tree
+
+```bash
+python3 main.py -t target.com -a -ia
+```
+
+Combined with `-a`, `-ia` prints nothing to the terminal and streams the URL tree to `output/url_tree.jsonl` as it's crawled, one JSON object per line (`{"url": ..., "params": [...], "parent": ...}`). The file is flushed on every node, so it can be followed live (e.g. `tail -f output/url_tree.jsonl`). The full merged session is still written to `output/url_tree.json` at the end.
+
 ### Load a previous session
 
 ```bash
